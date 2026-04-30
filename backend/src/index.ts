@@ -1,0 +1,38 @@
+import express from "express";
+import cors, { CorsOptions } from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
+import { env } from "./config/env";
+import authRoutes from "./routes/auth.routes";
+import { errorHandler } from "./middlewares/errorHandler";
+import protectedRoutes from "./routes/protected.routes";
+
+const app = express();
+
+const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const normalized = origin.replace(/\/$/, "");
+    if (env.corsOrigins.includes(normalized)) return callback(null, true);
+    return callback(new Error("CORS not allowed"), false);
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+app.use(helmet());
+app.use(morgan("dev"));
+app.use(express.json());
+app.use(cookieParser());
+
+app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
+app.use("/auth", authRoutes);
+app.use("/protected", protectedRoutes);
+
+app.use(errorHandler);
+
+app.listen(env.port, () => {
+  console.log(`Server running on http://localhost:${env.port}`);
+});

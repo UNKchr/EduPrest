@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TECH
+  STUDENT
+}
+
+enum LoanStatus {
+  ACTIVE
+  RETURNED
+  OVERDUE
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  fullName  String
+  role      Role      @default(STUDENT)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  loans     Loan[]
+  logs      AuditLog[] @relation("UserLogs")
+}
+
+model Item {
+  id          Int       @id @default(autoincrement())
+  name        String
+  code        String    @unique
+  description String?
+  quantity    Int       @default(1)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  loans       Loan[]
+}
+
+model Loan {
+  id          Int        @id @default(autoincrement())
+  userId      Int
+  itemId      Int
+  status      LoanStatus @default(ACTIVE)
+  loanedAt    DateTime   @default(now())
+  dueAt       DateTime
+  returnedAt  DateTime?
+
+  user        User       @relation(fields: [userId], references: [id])
+  item        Item       @relation(fields: [itemId], references: [id])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  userId    Int?
+  entity    String
+  entityId  Int?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation("UserLogs", fields: [userId], references: [id])
+}
