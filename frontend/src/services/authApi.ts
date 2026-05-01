@@ -4,24 +4,26 @@ import type { Role } from "../auth/roles";
 
 type LoginResponse = {
   accessToken: string;
-  user: { id: number; email: string; role: Role };
+  user: { id: number; email: string; role: Role; orgId: number };
 };
 
 export const authApi = {
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string, organizationNit: string) => {
     const { data } = await http.post<LoginResponse>("/auth/login", {
       email,
       password,
+      organizationNit
     });
     tokenStore.set(data.accessToken);
     return data.user;
   },
 
-  register: async (email: string, password: string, fullName: string) => {
+  register: async (email: string, password: string, fullName: string, organizationNit: string) => {
     const { data } = await http.post<LoginResponse>("/auth/register", {
       email,
       password,
       fullName,
+      organizationNit
     });
     tokenStore.set(data.accessToken);
     return data.user;
@@ -36,5 +38,5 @@ export const authApi = {
   logout: async () => {
     await http.post("/auth/logout");
     tokenStore.clear();
-  },
+  }
 };

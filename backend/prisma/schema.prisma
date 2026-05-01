@@ -8,6 +8,7 @@ datasource db {
 }
 
 enum Role {
+  SUPER_ADMIN
   ADMIN
   TECH
   STUDENT
@@ -19,43 +20,91 @@ enum LoanStatus {
   OVERDUE
 }
 
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  BANNED
+}
+
+enum ReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Organization {
+  id        Int                @id @default(autoincrement())
+  name      String
+  nit       String             @unique
+  status    OrganizationStatus @default(ACTIVE)
+  bannedAt  DateTime?
+  banReason String?
+  createdAt DateTime           @default(now())
+
+  users   User[]
+  items   Item[]
+  loans   Loan[]
+  logs    AuditLog[]
+  reports UserReport[]
+}
+
 model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
+  id        Int        @id @default(autoincrement())
+  email     String
   password  String
   fullName  String
-  role      Role      @default(STUDENT)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  role      Role       @default(STUDENT)
+  status    UserStatus @default(ACTIVE)
+  bannedAt  DateTime?
+  banReason String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
-  loans     Loan[]
-  logs      AuditLog[] @relation("UserLogs")
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  loans           Loan[]
+  logs            AuditLog[]   @relation("UserLogs")
+  reportsMade     UserReport[] @relation("ReportsMade")
+  reportsReceived UserReport[] @relation("ReportsReceived")
+
+  @@unique([email, organizationId])
 }
 
 model Item {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
-  code        String    @unique
+  code        String
   description String?
-  quantity    Int       @default(1)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  quantity    Int      @default(1)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  loans       Loan[]
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  loans Loan[]
 }
 
 model Loan {
-  id          Int        @id @default(autoincrement())
-  userId      Int
-  itemId      Int
-  status      LoanStatus @default(ACTIVE)
-  loanedAt    DateTime   @default(now())
-  dueAt       DateTime
-  returnedAt  DateTime?
+  id         Int        @id @default(autoincrement())
+  userId     Int
+  itemId     Int
+  status     LoanStatus @default(ACTIVE)
+  loanedAt   DateTime   @default(now())
+  dueAt      DateTime
+  returnedAt DateTime?
 
-  user        User       @relation(fields: [userId], references: [id])
-  item        Item       @relation(fields: [itemId], references: [id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
+  item Item @relation(fields: [itemId], references: [id])
 }
 
 model AuditLog {
@@ -66,5 +115,23 @@ model AuditLog {
   entityId  Int?
   createdAt DateTime @default(now())
 
-  user      User?    @relation("UserLogs", fields: [userId], references: [id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  user User? @relation("UserLogs", fields: [userId], references: [id])
+}
+
+model UserReport {
+  id           Int          @id @default(autoincrement())
+  userId       Int
+  reportedById Int
+  reason       String
+  status       ReportStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  user       User @relation("ReportsReceived", fields: [userId], references: [id])
+  reportedBy User @relation("ReportsMade", fields: [reportedById], references: [id])
 }

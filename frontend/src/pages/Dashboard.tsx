@@ -1,5 +1,6 @@
 import { useAuth } from "../context/useAuth";
 import { RoleGate } from "../components/RoleGate";
+import { Link } from "react-router-dom";
 
 export const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -10,26 +11,27 @@ export const Dashboard = () => {
       <p>Bienvenido: {user?.email}</p>
       <p>Rol: {user?.role}</p>
 
-      <RoleGate allowed={["STUDENT", "TECH", "ADMIN"]}>
-        <section>
-          <h3>Panel Estudiante</h3>
-          <p>Contenido visible para estudiantes.</p>
-        </section>
-      </RoleGate>
+      <nav style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+        <Link to="/loans">Préstamos</Link>
 
-      <RoleGate allowed={["TECH", "ADMIN"]}>
-        <section>
-          <h3>Panel Técnico</h3>
-          <p>Contenido visible para técnicos.</p>
-        </section>
-      </RoleGate>
+        <RoleGate allowed={["TECH", "ADMIN", "SUPER_ADMIN"]}>
+          <Link to="/items">Items</Link>
+        </RoleGate>
 
-      <RoleGate allowed={["ADMIN"]}>
-        <section>
-          <h3>Panel Admin</h3>
-          <p>Contenido visible solo para admin.</p>
-        </section>
-      </RoleGate>
+        <RoleGate allowed={["TECH"]}>
+          <Link to="/tech-reports">Reportar usuario</Link>
+        </RoleGate>
+
+        <RoleGate allowed={["ADMIN", "SUPER_ADMIN"]}>
+          <Link to="/admin-users">Usuarios</Link>
+          <Link to="/admin-reports">Reportes</Link>
+        </RoleGate>
+
+        <RoleGate allowed={["SUPER_ADMIN"]}>
+          <Link to="/super-orgs">Organizaciones</Link>
+          <Link to="/reports">Reportes Globales</Link>
+        </RoleGate>
+      </nav>
 
       <button onClick={logout}>Cerrar sesión</button>
     </main>

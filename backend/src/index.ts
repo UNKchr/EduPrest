@@ -7,6 +7,13 @@ import { env } from "./config/env";
 import authRoutes from "./routes/auth.routes";
 import { errorHandler } from "./middlewares/errorHandler";
 import protectedRoutes from "./routes/protected.routes";
+import itemsRoutes from "./routes/items.routes";
+import loansRoutes from "./routes/loans.routes";
+import auditRoutes from "./routes/audit.routes";
+import reportsRoutes from "./routes/reports.routes";
+import organizationsRoutes from "./routes/organizations.routes";
+import usersRoutes from "./routes/users.routes";
+import userReportsRoutes from "./routes/userReports.routes";
 
 const app = express();
 
@@ -30,6 +37,14 @@ app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
 app.use("/auth", authRoutes);
 app.use("/protected", protectedRoutes);
+app.use("/items", itemsRoutes);
+app.use("/loans", loansRoutes);
+app.use("/audit", auditRoutes);
+app.use("/reports", reportsRoutes);
+
+app.use("/orgs", organizationsRoutes);
+app.use("/users", usersRoutes);
+app.use("/user-reports", userReportsRoutes);
 
 app.use(errorHandler);
 

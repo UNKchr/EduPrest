@@ -1,10 +1,12 @@
 import jwt, { JwtPayload, SignOptions } from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { env } from "../config/env";
+import type { Role } from "./roles";
 
 type AccessPayload = {
   sub: string;
-  role: string;
+  role: Role;
+  orgId: number;
 };
 
 type RefreshPayload = {
@@ -12,9 +14,9 @@ type RefreshPayload = {
   jti: string;
 };
 
-export const signAccessToken = (userId: number, role: string) => {
+export const signAccessToken = (userId: number, role: Role, orgId: number) => {
   const options: SignOptions = { expiresIn: env.jwtAccessTtl as SignOptions["expiresIn"] };
-  const payload: AccessPayload = { sub: String(userId), role };
+  const payload: AccessPayload = { sub: String(userId), role, orgId };
   return jwt.sign(payload, env.jwtAccessSecret, options);
 };
 
