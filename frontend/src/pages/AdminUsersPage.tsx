@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import { usersApi, type UserRow } from "../services/usersApi";
-import { organizationsApi, type Organization } from "../services/OrganizationsApi";
+import { organizationsApi, type Organization } from "../services/organizationsApi";
 import { useAuth } from "../context/useAuth";
 import type { Role } from "../auth/roles";
+import { AppLayout } from "../components/layout/AppLayout";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
+import { Button } from "../components/ui/Button";
+import { Badge } from "../components/ui/Badge";
 
 export const AdminUsersPage = () => {
   const { user } = useAuth();
@@ -34,9 +41,6 @@ export const AdminUsersPage = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.email.trim().length < 5 || form.password.length < 8 || form.fullName.length < 3) {
-      return;
-    }
     await usersApi.create({
       email: form.email,
       password: form.password,
@@ -66,90 +70,74 @@ export const AdminUsersPage = () => {
   };
 
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif" }}>
-      <h2>Usuarios</h2>
+    <AppLayout>
+      <PageHeader title="Usuarios" subtitle="Gestión de usuarios y roles" />
 
-      <form onSubmit={submit} style={{ display: "grid", gap: 8, maxWidth: 420 }}>
-        <input
-          placeholder="Nombre completo"
-          value={form.fullName}
-          onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-        />
-        <input
-          placeholder="Email"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-        />
-        <input
-          placeholder="Password"
-          type="password"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-        />
-        {user?.role === "SUPER_ADMIN" && (
-          <select
-            value={form.organizationId}
-            onChange={(e) => setForm({ ...form, organizationId: e.target.value })}
-          >
-            <option value="">Organización</option>
-            {orgs.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name} ({o.nit})
-              </option>
-            ))}
-          </select>
-        )}
-        <select
-          value={form.role}
-          onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
-        >
-          <option value="STUDENT">STUDENT</option>
-          <option value="TECH">TECH</option>
-          <option value="ADMIN">ADMIN</option>
-        </select>
-        <button type="submit">Crear usuario</button>
-      </form>
+      <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+        <Card>
+          <form onSubmit={submit} className="grid gap-3">
+            <Input placeholder="Nombre completo" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+            <Input placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <Input placeholder="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            {user?.role === "SUPER_ADMIN" && (
+              <Select value={form.organizationId} onChange={(e) => setForm({ ...form, organizationId: e.target.value })}>
+                <option value="">Organización</option>
+                {orgs.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name} ({o.nit})
+                  </option>
+                ))}
+              </Select>
+            )}
+            <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
+              <option value="STUDENT">STUDENT</option>
+              <option value="TECH">TECH</option>
+              <option value="ADMIN">ADMIN</option>
+            </Select>
+            <Button type="submit">Crear usuario</Button>
+          </form>
+        </Card>
 
-      <hr />
-
-      <table width="100%" cellPadding={6}>
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Nombre</th>
-            <th>Rol</th>
-            <th>Estado</th>
-            <th>Org</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.id}>
-              <td>{u.email}</td>
-              <td>{u.fullName}</td>
-              <td>{u.role}</td>
-              <td>{u.status}</td>
-              <td>{u.organizationId}</td>
-              <td>
-                <select
-                  value={u.role}
-                  onChange={(e) => changeRole(u.id, e.target.value as Role)}
-                >
-                  <option value="STUDENT">STUDENT</option>
-                  <option value="TECH">TECH</option>
-                  <option value="ADMIN">ADMIN</option>
-                </select>{" "}
-                {u.status === "ACTIVE" ? (
-                  <button onClick={() => ban(u.id)}>Banear</button>
-                ) : (
-                  <button onClick={() => unban(u.id)}>Desbanear</button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </main>
+        <Card>
+          <table className="w-full text-sm">
+            <thead className="text-muted">
+              <tr>
+                <th className="text-left py-2">Email</th>
+                <th className="text-left py-2">Nombre</th>
+                <th className="text-left py-2">Rol</th>
+                <th className="text-left py-2">Estado</th>
+                <th className="text-left py-2">Org</th>
+                <th className="text-left py-2">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id} className="border-t border-border">
+                  <td className="py-2">{u.email}</td>
+                  <td>{u.fullName}</td>
+                  <td>{u.role}</td>
+                  <td>
+                    <Badge tone={u.status === "ACTIVE" ? "success" : "danger"}>{u.status}</Badge>
+                  </td>
+                  <td>{u.organizationId}</td>
+                  <td className="space-x-2">
+                    <Select value={u.role} onChange={(e) => changeRole(u.id, e.target.value as Role)} className="inline-flex w-auto">
+                      <option value="STUDENT">STUDENT</option>
+                      <option value="TECH">TECH</option>
+                      <option value="ADMIN">ADMIN</option>
+                    </Select>
+                    {u.status === "ACTIVE" ? (
+                      <Button variant="danger" size="sm" onClick={() => ban(u.id)}>Banear</Button>
+                    ) : (
+                      <Button variant="secondary" size="sm" onClick={() => unban(u.id)}>Desbanear</Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      </div>
+    </AppLayout>
   );
 };

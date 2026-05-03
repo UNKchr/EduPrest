@@ -21,14 +21,15 @@ export const logAction = async (
 export const listAuditLogs = (query: {
   entity?: string;
   userId?: number;
-  organizationId?: number;
+  organizationId: number;
   limit?: number;
   offset?: number;
 }) => {
-  const { entity, userId, limit = 50, offset = 0 } = query;
+  const { entity, userId, organizationId, limit = 50, offset = 0 } = query;
 
   return prisma.auditLog.findMany({
     where: {
+      organizationId,
       entity: entity || undefined,
       userId: userId || undefined
     },

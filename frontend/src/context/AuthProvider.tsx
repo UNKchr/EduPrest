@@ -7,8 +7,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const login = async (email: string, password: string) => {
-    const u = await authApi.login(email, password);
+  const login = async (email: string, password: string, organizationNit: string) => {
+    const u = await authApi.login(email, password, organizationNit);
+    setUser(u);
+  };
+
+  const register = async (
+    email: string,
+    password: string,
+    fullName: string,
+    organizationNit: string
+  ) => {
+    const u = await authApi.register(email, password, fullName, organizationNit);
     setUser(u);
   };
 
@@ -21,12 +31,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setOnLogout(() => setUser(null));
     authApi
       .refresh()
-      .then(() => setLoading(false))
+      .then((u) => {
+        setUser(u);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

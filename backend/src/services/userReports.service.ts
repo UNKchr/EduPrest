@@ -2,6 +2,12 @@ import { prisma } from "../config/prisma";
 import { ApiError } from "../middlewares/errorHandler";
 
 export const createReport = async (userId: number, reportedById: number, orgId: number, reason: string) => {
+  const user = await prisma.user.findFirst({ where: { id: userId, organizationId: orgId } });
+  if (!user) throw new ApiError("User not found", 404);
+
+  const reporter = await prisma.user.findFirst({ where: { id: reportedById, organizationId: orgId } });
+  if (!reporter) throw new ApiError("Reporter not found", 404);
+
   return prisma.userReport.create({
     data: { userId, reportedById, organizationId: orgId, reason }
   });

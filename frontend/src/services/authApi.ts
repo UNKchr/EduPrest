@@ -7,6 +7,11 @@ type LoginResponse = {
   user: { id: number; email: string; role: Role; orgId: number };
 };
 
+type RefreshResponse = {
+  accessToken: string;
+  user: { id: number; email: string; role: Role; orgId: number };
+};
+
 export const authApi = {
   login: async (email: string, password: string, organizationNit: string) => {
     const { data } = await http.post<LoginResponse>("/auth/login", {
@@ -30,9 +35,9 @@ export const authApi = {
   },
 
   refresh: async () => {
-    const { data } = await http.post<{ accessToken: string }>("/auth/refresh");
+    const { data } = await http.post<RefreshResponse>("/auth/refresh");
     tokenStore.set(data.accessToken);
-    return data.accessToken;
+    return data.user;
   },
 
   logout: async () => {

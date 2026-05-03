@@ -13,11 +13,11 @@ import {
 const router = Router();
 
 router.get("/", authenticate, getLoans);
-router.get("/my", authenticate, authorize("STUDENT", "TECH", "ADMIN"), getMyLoans);
-router.get("/:id", authenticate, authorize("TECH", "ADMIN"), getLoan);
+router.get("/my", authenticate, authorize("STUDENT"), getMyLoans);
+router.get("/:id", authenticate, authorize("TECH"), getLoan);
 
-router.post("/", authenticate, authorize("TECH", "ADMIN"), createLoanHandler);
-router.patch("/:id/return", authenticate, authorize("TECH", "ADMIN"), returnLoanHandler);
-router.patch("/:id/status", authenticate, authorize("TECH", "ADMIN"), updateLoanStatusHandler);
+router.post("/", authenticate, authorize("TECH"), createLoanHandler);
+router.patch("/:id/return", authenticate, authorize("TECH"), returnLoanHandler);
+router.patch("/:id/status", authenticate, authorize("TECH"), updateLoanStatusHandler);
 
 export default router;

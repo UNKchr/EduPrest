@@ -9,26 +9,30 @@ type ItemInput = {
   isActive?: boolean;
 };
 
-export const listItems = () => {
-  return prisma.item.findMany({ orderBy: { createdAt: "desc" } });
+export const listItems = (organizationId: number) => {
+  return prisma.item.findMany({ where: { organizationId }, orderBy: { createdAt: "desc" } });
 };
 
-export const getItemById = async (id: number) => {
-  const item = await prisma.item.findUnique({ where: { id } });
+export const getItemById = async (id: number, organizationId: number) => {
+  const item = await prisma.item.findFirst({ where: { id, organizationId } });
   if (!item) throw new ApiError("Item not found", 404);
   return item;
 };
 
-export const createItem = (data: ItemInput) => {
-  return prisma.item.create({ data });
+export const createItem = (data: ItemInput, organizationId: number) => {
+  return prisma.item.create({ data: { ...data, organizationId } });
 };
 
-export const updateItem = async (id: number, data: Partial<ItemInput>) => {
-  await getItemById(id);
+export const updateItem = async (
+  id: number,
+  data: Partial<ItemInput>,
+  organizationId: number
+) => {
+  await getItemById(id, organizationId);
   return prisma.item.update({ where: { id }, data });
 };
 
-export const deleteItem = async (id: number) => {
-  await getItemById(id);
+export const deleteItem = async (id: number, organizationId: number) => {
+  await getItemById(id, organizationId);
   return prisma.item.delete({ where: { id } });
 };

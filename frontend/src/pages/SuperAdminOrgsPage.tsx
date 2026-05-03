@@ -1,25 +1,24 @@
 import { useEffect, useState } from "react";
-import { organizationsApi, type Organization } from "../services/OrganizationsApi";
+import { organizationsApi, type Organization } from "../services/organizationsApi";
+import { AppLayout } from "../components/layout/AppLayout";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { Button } from "../components/ui/Button";
+import { Badge } from "../components/ui/Badge";
 
 export const SuperAdminOrgsPage = () => {
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [form, setForm] = useState({ name: "", nit: "" });
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const load = async () => {
-    try {
-      const data = await organizationsApi.list();
-      setOrgs(data);
-    } catch {
-      setMessage({ type: "error", text: "No se pudieron cargar organizaciones." });
-    }
+    const data = await organizationsApi.list();
+    setOrgs(data);
   };
 
   useEffect(() => {
     let active = true;
-    organizationsApi.list().then((data) => {
-      if (active) setOrgs(data);
-    });
+    organizationsApi.list().then((data) => active && setOrgs(data));
     return () => {
       active = false;
     };
@@ -27,18 +26,9 @@ export const SuperAdminOrgsPage = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.name.trim().length < 3 || form.nit.trim().length < 3) {
-      setMessage({ type: "error", text: "Nombre y NIT inválidos." });
-      return;
-    }
-    try {
-      await organizationsApi.create(form);
-      setForm({ name: "", nit: "" });
-      setMessage({ type: "success", text: "Organización creada." });
-      await load();
-    } catch {
-      setMessage({ type: "error", text: "No se pudo crear la organización." });
-    }
+    await organizationsApi.create(form);
+    setForm({ name: "", nit: "" });
+    await load();
   };
 
   const ban = async (id: number) => {
@@ -54,57 +44,48 @@ export const SuperAdminOrgsPage = () => {
   };
 
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif" }}>
-      <h2>Organizaciones</h2>
+    <AppLayout>
+      <PageHeader title="Organizaciones" subtitle="Control global de instituciones" />
+      <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+        <Card>
+          <form onSubmit={submit} className="grid gap-3">
+            <Input placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input placeholder="NIT" value={form.nit} onChange={(e) => setForm({ ...form, nit: e.target.value })} />
+            <Button type="submit">Crear organización</Button>
+          </form>
+        </Card>
 
-      {message && (
-        <p style={{ color: message.type === "error" ? "crimson" : "green" }}>
-          {message.text}
-        </p>
-      )}
-
-      <form onSubmit={submit} style={{ display: "grid", gap: 8, maxWidth: 420 }}>
-        <input
-          placeholder="Nombre"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
-        <input
-          placeholder="NIT"
-          value={form.nit}
-          onChange={(e) => setForm({ ...form, nit: e.target.value })}
-        />
-        <button type="submit">Crear organización</button>
-      </form>
-
-      <hr />
-
-      <table width="100%" cellPadding={6}>
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>NIT</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orgs.map((o) => (
-            <tr key={o.id}>
-              <td>{o.name}</td>
-              <td>{o.nit}</td>
-              <td>{o.status}</td>
-              <td>
-                {o.status === "ACTIVE" ? (
-                  <button onClick={() => ban(o.id)}>Banear</button>
-                ) : (
-                  <button onClick={() => unban(o.id)}>Desbanear</button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </main>
+        <Card>
+          <table className="w-full text-sm">
+            <thead className="text-muted">
+              <tr>
+                <th className="text-left py-2">Nombre</th>
+                <th className="text-left py-2">NIT</th>
+                <th className="text-left py-2">Estado</th>
+                <th className="text-left py-2">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orgs.map((o) => (
+                <tr key={o.id} className="border-t border-border">
+                  <td className="py-2">{o.name}</td>
+                  <td>{o.nit}</td>
+                  <td>
+                    <Badge tone={o.status === "ACTIVE" ? "success" : "danger"}>{o.status}</Badge>
+                  </td>
+                  <td>
+                    {o.status === "ACTIVE" ? (
+                      <Button variant="danger" size="sm" onClick={() => ban(o.id)}>Banear</Button>
+                    ) : (
+                      <Button variant="secondary" size="sm" onClick={() => unban(o.id)}>Desbanear</Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      </div>
+    </AppLayout>
   );
 };

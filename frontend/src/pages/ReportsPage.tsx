@@ -1,43 +1,51 @@
 import { useEffect, useState } from "react";
 import { reportsApi, type SummaryReport } from "../services/reportsApi";
+import { AppLayout } from "../components/layout/AppLayout";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Card } from "../components/ui/Card";
+import { StatCard } from "../components/ui/StatCard";
 
 export const ReportsPage = () => {
-  const [data, setData] = useState<SummaryReport | null>(null);
+  const [summary, setSummary] = useState<SummaryReport | null>(null);
 
   useEffect(() => {
-    reportsApi.summary().then(setData);
+    reportsApi.summary().then(setSummary);
   }, []);
 
-  if (!data) return <div style={{ padding: 24 }}>Cargando...</div>;
-
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif" }}>
-      <h2>Reportes</h2>
+    <AppLayout>
+      <PageHeader title="Reportes" subtitle="Resumen global del sistema" />
+      {summary && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Items totales" value={summary.items.totalItems} />
+          <StatCard label="Items activos" value={summary.items.activeItems} tone="success" />
+          <StatCard label="Préstamos activos" value={summary.loans.activeLoans} tone="brand" />
+          <StatCard label="Vencidos" value={summary.loans.overdueLoans} tone="warning" />
+        </div>
+      )}
 
-      <section>
-        <h3>Inventario</h3>
-        <p>Total Items: {data.items.totalItems}</p>
-        <p>Items Activos: {data.items.activeItems}</p>
-      </section>
-
-      <section>
-        <h3>Préstamos</h3>
-        <p>Total: {data.loans.totalLoans}</p>
-        <p>Activos: {data.loans.activeLoans}</p>
-        <p>Devueltos: {data.loans.returnedLoans}</p>
-        <p>Atrasados: {data.loans.overdueLoans}</p>
-      </section>
-
-      <section>
-        <h3>Items más prestados</h3>
-        <ul>
-          {data.topItems.map((i) => (
-            <li key={i.itemId}>
-              {i.name} ({i.code}) — {i.totalLoans} préstamos
-            </li>
-          ))}
-        </ul>
-      </section>
-    </main>
+      {summary && (
+        <Card className="mt-6">
+          <table className="w-full text-sm">
+            <thead className="text-muted">
+              <tr>
+                <th className="text-left py-2">Item</th>
+                <th className="text-left py-2">Código</th>
+                <th className="text-left py-2">Total préstamos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.topItems.map((i) => (
+                <tr key={i.itemId} className="border-t border-border">
+                  <td className="py-2">{i.name}</td>
+                  <td>{i.code}</td>
+                  <td>{i.totalLoans}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+    </AppLayout>
   );
 };

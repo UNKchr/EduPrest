@@ -1,39 +1,23 @@
-import { useAuth } from "../context/useAuth";
-import { RoleGate } from "../components/RoleGate";
-import { Link } from "react-router-dom";
+import { AppLayout } from "../components/layout/AppLayout";
+import { StatCard } from "../components/ui/StatCard";
 
 export const Dashboard = () => {
-  const { user, logout } = useAuth();
-
   return (
-    <main style={{ fontFamily: "sans-serif", padding: 24 }}>
-      <h1>EduPrest</h1>
-      <p>Bienvenido: {user?.email}</p>
-      <p>Rol: {user?.role}</p>
+    <AppLayout>
+      <div className="flex flex-col gap-6">
+        <div className="rounded-2xl glass p-6">
+          <h1 className="text-3xl font-semibold">Panel General</h1>
+          <p className="text-muted text-sm mt-2">
+            Visualiza el estado de préstamos y actividad de tu organización.
+          </p>
+        </div>
 
-      <nav style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-        <Link to="/loans">Préstamos</Link>
-
-        <RoleGate allowed={["TECH", "ADMIN", "SUPER_ADMIN"]}>
-          <Link to="/items">Items</Link>
-        </RoleGate>
-
-        <RoleGate allowed={["TECH"]}>
-          <Link to="/tech-reports">Reportar usuario</Link>
-        </RoleGate>
-
-        <RoleGate allowed={["ADMIN", "SUPER_ADMIN"]}>
-          <Link to="/admin-users">Usuarios</Link>
-          <Link to="/admin-reports">Reportes</Link>
-        </RoleGate>
-
-        <RoleGate allowed={["SUPER_ADMIN"]}>
-          <Link to="/super-orgs">Organizaciones</Link>
-          <Link to="/reports">Reportes Globales</Link>
-        </RoleGate>
-      </nav>
-
-      <button onClick={logout}>Cerrar sesión</button>
-    </main>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard label="Préstamos activos" value="12" tone="brand" />
+          <StatCard label="Items disponibles" value="87" tone="success" />
+          <StatCard label="Usuarios bloqueados" value="3" tone="warning" />
+        </div>
+      </div>
+    </AppLayout>
   );
 };

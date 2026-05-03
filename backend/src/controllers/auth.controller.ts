@@ -40,7 +40,7 @@ export const register = async (req: Request, res: Response) => {
     httpOnly: true,
     secure: env.cookieSecure,
     sameSite: "lax",
-    path: "/auth/refresh"
+    path: "/auth"
   });
 
   res.json({ accessToken, user: { id: user.id, email: user.email, role: user.role, orgId: user.organizationId } });
@@ -63,7 +63,7 @@ export const login = async (req: Request, res: Response) => {
     httpOnly: true,
     secure: env.cookieSecure,
     sameSite: "lax",
-    path: "/auth/refresh"
+    path: "/auth"
   });
 
   res.json({ accessToken, user: { id: user.id, email: user.email, role: user.role, orgId: user.organizationId } });
@@ -90,15 +90,16 @@ export const refresh = async (req: Request, res: Response) => {
   await redis.set(refreshKey(newJti), String(payload.sub), "EX", 60 * 60 * 24 * 7);
 
   const accessToken = signAccessToken(user.id, user.role, user.organizationId);
+  const userInfo = { id: user.id, email: user.email, role: user.role, orgId: user.organizationId };
 
   res.cookie("refreshToken", newRefresh, {
     httpOnly: true,
     secure: env.cookieSecure,
     sameSite: "lax",
-    path: "/auth/refresh"
+    path: "/auth"
   });
 
-  res.json({ accessToken });
+  res.json({ accessToken, user: userInfo });
 };
 
 export const logout = async (req: Request, res: Response) => {
@@ -112,6 +113,10 @@ export const logout = async (req: Request, res: Response) => {
     }
   }
 
-  res.clearCookie("refreshToken", { path: "/auth/refresh" });
+  res.clearCookie("refreshToken", {
+    path: "/auth",
+    sameSite: "lax",
+    secure: env.cookieSecure
+  });
   res.json({ message: "Logged out" });
 };

@@ -5,6 +5,6 @@ import { getAuditLogs } from "../controllers/audit.controller";
 
 const router = Router();
 
-router.get("/", authenticate, authorize("TECH", "ADMIN"), getAuditLogs);
+router.get("/", authenticate, authorize("TECH"), getAuditLogs);
 
 export default router;
