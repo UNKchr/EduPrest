@@ -1,7 +1,50 @@
+import bcrypt from "bcrypt";
 import { prisma } from "../config/prisma";
 import { ApiError } from "../middlewares/errorHandler";
 import type { Role } from "../utils/roles";
-import bcrypt from "bcrypt";
+
+type ActorContext = {
+  id: number;
+  role: Role;
+  orgId?: number;
+};
+
+const loadTargetUser = async (id: number, orgId?: number) => {
+  const user = await prisma.user.findFirst({
+    where: orgId ? { id, organizationId: orgId } : { id }
+  });
+  if (!user) throw new ApiError("User not found", 404);
+  return user;
+};
+
+const ensureNotSelf = (targetId: number, actorId: number, action: string) => {
+  if (targetId === actorId) {
+    throw new ApiError(`You cannot ${action} your own user`, 403);
+  }
+};
+
+const ensureNotLastAdmin = async (organizationId: number, targetId: number) => {
+  const remaining = await prisma.user.count({
+    where: {
+      organizationId,
+      role: "ADMIN",
+      status: "ACTIVE",
+      id: { not: targetId }
+    }
+  });
+  if (remaining === 0) {
+    throw new ApiError("At least one active admin is required", 409);
+  }
+};
+
+const ensureNotLastSuperAdmin = async (targetId: number) => {
+  const remaining = await prisma.user.count({
+    where: { role: "SUPER_ADMIN", status: "ACTIVE", id: { not: targetId } }
+  });
+  if (remaining === 0) {
+    throw new ApiError("At least one active super admin is required", 409);
+  }
+};
 
 export const listUsers = async (orgId?: number) => {
   return prisma.user.findMany({
@@ -28,32 +71,56 @@ export const createUserByAdmin = async (
   });
 };
 
-export const updateUserRole = async (id: number, role: Role, orgId?: number) => {
-  if (orgId) {
-    const user = await prisma.user.findFirst({ where: { id, organizationId: orgId } });
-    if (!user) throw new ApiError("User not found", 404);
+export const updateUserRole = async (id: number, role: Role, actor: ActorContext) => {
+  const target = await loadTargetUser(id, actor.orgId);
+  ensureNotSelf(target.id, actor.id, "change the role of");
+
+  if (target.role === "SUPER_ADMIN" && actor.role !== "SUPER_ADMIN") {
+    throw new ApiError("Forbidden", 403);
   }
-  return prisma.user.update({ where: { id }, data: { role } });
+
+  if (target.role === "SUPER_ADMIN" && role !== "SUPER_ADMIN") {
+    await ensureNotLastSuperAdmin(target.id);
+  }
+
+  if (target.role === "ADMIN" && role !== "ADMIN") {
+    await ensureNotLastAdmin(target.organizationId, target.id);
+  }
+
+  return prisma.user.update({ where: { id: target.id }, data: { role } });
 };
 
-export const banUser = async (id: number, reason: string, orgId?: number) => {
-  if (orgId) {
-    const user = await prisma.user.findFirst({ where: { id, organizationId: orgId } });
-    if (!user) throw new ApiError("User not found", 404);
+export const banUser = async (id: number, reason: string, actor: ActorContext) => {
+  const target = await loadTargetUser(id, actor.orgId);
+  ensureNotSelf(target.id, actor.id, "ban");
+
+  if (target.role === "SUPER_ADMIN" && actor.role !== "SUPER_ADMIN") {
+    throw new ApiError("Forbidden", 403);
   }
+
+  if (target.role === "SUPER_ADMIN" && target.status === "ACTIVE") {
+    await ensureNotLastSuperAdmin(target.id);
+  }
+
+  if (target.role === "ADMIN" && target.status === "ACTIVE") {
+    await ensureNotLastAdmin(target.organizationId, target.id);
+  }
+
   return prisma.user.update({
-    where: { id },
+    where: { id: target.id },
     data: { status: "BANNED", bannedAt: new Date(), banReason: reason }
   });
 };
 
-export const unbanUser = async (id: number, orgId?: number) => {
-  if (orgId) {
-    const user = await prisma.user.findFirst({ where: { id, organizationId: orgId } });
-    if (!user) throw new ApiError("User not found", 404);
+export const unbanUser = async (id: number, actor: ActorContext) => {
+  const target = await loadTargetUser(id, actor.orgId);
+
+  if (target.role === "SUPER_ADMIN" && actor.role !== "SUPER_ADMIN") {
+    throw new ApiError("Forbidden", 403);
   }
+
   return prisma.user.update({
-    where: { id },
+    where: { id: target.id },
     data: { status: "ACTIVE", bannedAt: null, banReason: null }
   });
 };
