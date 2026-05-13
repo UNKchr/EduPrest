@@ -14,6 +14,7 @@ import reportsRoutes from "./routes/reports.routes";
 import organizationsRoutes from "./routes/organizations.routes";
 import usersRoutes from "./routes/users.routes";
 import userReportsRoutes from "./routes/userReports.routes";
+import banRequestsRoutes from "./routes/banRequests.routes";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use("/reports", reportsRoutes);
 app.use("/orgs", organizationsRoutes);
 app.use("/users", usersRoutes);
 app.use("/user-reports", userReportsRoutes);
+app.use("/ban-requests", banRequestsRoutes);
 
 app.use(errorHandler);
 

@@ -19,7 +19,7 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="min-h-screen bg-bg text-text">
-      <div className="flex">
+      <div className="flex min-h-screen">
         <aside className="hidden lg:flex w-64 flex-col gap-6 border-r border-border bg-surface p-6">
           <div className="flex items-center gap-3">
             <IconLogo />
@@ -60,11 +60,14 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
               <NavLink to="/super-orgs" className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-surface-2", isActive && "bg-surface-2")}>
                 <IconChart /> Organizaciones
               </NavLink>
+              <NavLink to="/super-requests" className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-surface-2", isActive && "bg-surface-2")}>
+                <IconShield /> Solicitudes de baneo
+              </NavLink>
             </RoleGate>
           </nav>
         </aside>
 
-        <main className="flex-1">
+        <main className="flex min-h-screen flex-1 flex-col">
           <header className="sticky top-0 z-10 border-b border-border bg-bg/80 backdrop-blur px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
@@ -77,7 +80,7 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </header>
 
-          <div className="p-6">{children}</div>
+          <div className="flex-1 p-6">{children}</div>
         </main>
       </div>
     </div>

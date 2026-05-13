@@ -11,6 +11,7 @@ import {
   updateLoanStatus
 } from "../services/loans.service";
 import { logAction } from "../services/audit.service";
+import { safeAuditLog } from "../utils/audit";
 
 const createLoanSchema = z.object({
   userId: z.number().int(),
@@ -41,14 +42,23 @@ export const getMyLoans = async (req: AuthRequest, res: Response) => {
 export const getLoan = async (req: AuthRequest, res: Response) => {
   if (!req.user) throw new ApiError("Unauthorized", 401);
   const id = Number(req.params.id);
-  if (!id) throw new ApiError("Invalid loan id", 400);
+  if (!id) {
+    await safeAuditLog("LOAN_INVALID_ID_GET", req.user.id, "Loan", 0, req.user.orgId);
+    throw new ApiError("Invalid loan id", 400);
+  }
   const loan = await getLoanById(id, req.user.orgId);
   res.json(loan);
 };
 
 export const createLoanHandler = async (req: AuthRequest, res: Response) => {
   if (!req.user) throw new ApiError("Unauthorized", 401);
-  const data = createLoanSchema.parse(req.body);
+  let data: z.infer<typeof createLoanSchema>;
+  try {
+    data = createLoanSchema.parse(req.body);
+  } catch {
+    await safeAuditLog("LOAN_CREATE_INVALID", req.user.id, "Loan", 0, req.user.orgId);
+    throw new ApiError("Invalid loan data", 400);
+  }
   const loan = await createLoan(data.userId, data.itemId, data.dueAt, req.user.orgId);
   await logAction("LOAN_CREATED", req.user.id, "Loan", loan.id, req.user.orgId);
   res.status(201).json(loan);
@@ -57,7 +67,10 @@ export const createLoanHandler = async (req: AuthRequest, res: Response) => {
 export const returnLoanHandler = async (req: AuthRequest, res: Response) => {
   if (!req.user) throw new ApiError("Unauthorized", 401);
   const id = Number(req.params.id);
-  if (!id) throw new ApiError("Invalid loan id", 400);
+  if (!id) {
+    await safeAuditLog("LOAN_INVALID_ID_RETURN", req.user.id, "Loan", 0, req.user.orgId);
+    throw new ApiError("Invalid loan id", 400);
+  }
   const loan = await markLoanReturned(id, req.user.orgId);
   await logAction("LOAN_RETURNED", req.user.id, "Loan", loan.id, req.user.orgId);
   res.json(loan);
@@ -66,8 +79,17 @@ export const returnLoanHandler = async (req: AuthRequest, res: Response) => {
 export const updateLoanStatusHandler = async (req: AuthRequest, res: Response) => {
   if (!req.user) throw new ApiError("Unauthorized", 401);
   const id = Number(req.params.id);
-  if (!id) throw new ApiError("Invalid loan id", 400);
-  const { status } = updateStatusSchema.parse(req.body);
+  if (!id) {
+    await safeAuditLog("LOAN_INVALID_ID_STATUS", req.user.id, "Loan", 0, req.user.orgId);
+    throw new ApiError("Invalid loan id", 400);
+  }
+  let status: z.infer<typeof updateStatusSchema>["status"];
+  try {
+    ({ status } = updateStatusSchema.parse(req.body));
+  } catch {
+    await safeAuditLog("LOAN_STATUS_INVALID", req.user.id, "Loan", id, req.user.orgId);
+    throw new ApiError("Invalid loan status", 400);
+  }
   const loan = await updateLoanStatus(id, status, req.user.orgId);
   await logAction("LOAN_STATUS_UPDATED", req.user.id, "Loan", loan.id, req.user.orgId);
   res.json(loan);

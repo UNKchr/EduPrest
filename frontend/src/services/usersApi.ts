@@ -10,9 +10,19 @@ export type UserRow = {
   organizationId: number;
 };
 
+export type UsersListResponse = {
+  data: UserRow[];
+  total: number;
+};
+
 export const usersApi = {
-  list: async () => {
-    const { data } = await http.get<UserRow[]>("/users");
+  list: async (params?: {
+    q?: string;
+    role?: Role;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const { data } = await http.get<UsersListResponse>("/users", { params });
     return data;
   },
   create: async (payload: {
@@ -25,16 +35,22 @@ export const usersApi = {
     const { data } = await http.post<UserRow>("/users", payload);
     return data;
   },
-  updateRole: async (id: number, role: Role) => {
-    const { data } = await http.patch<UserRow>(`/users/${id}/role`, { role });
+  updateRole: async (id: number, role: Role, reason: string, confirm: string) => {
+    const { data } = await http.patch<UserRow>(`/users/${id}/role`, { role, reason, confirm });
     return data;
   },
-  ban: async (id: number, reason: string) => {
-    const { data } = await http.patch<UserRow>(`/users/${id}/ban`, { reason });
+  ban: async (id: number, reason: string, confirm: string) => {
+    const { data } = await http.patch<UserRow>(`/users/${id}/ban`, { reason, confirm });
     return data;
   },
-  unban: async (id: number) => {
-    const { data } = await http.patch<UserRow>(`/users/${id}/unban`);
+  unban: async (id: number, reason: string, confirm: string) => {
+    const { data } = await http.patch<UserRow>(`/users/${id}/unban`, { reason, confirm });
+    return data;
+  },
+  remove: async (id: number, confirm: string) => {
+    const { data } = await http.delete<{ message: string }>(`/users/${id}`, {
+      data: { confirm }
+    });
     return data;
   }
 };

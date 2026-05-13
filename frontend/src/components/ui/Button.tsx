@@ -12,7 +12,7 @@ export const Button = ({
   ...props
 }: ButtonProps) => {
   const base =
-    "inline-flex items-center justify-center rounded-xl font-medium transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex cursor-pointer items-center justify-center rounded-xl font-medium transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
   const variants = {
     primary: "bg-brand text-white hover:brightness-110 shadow-soft",
     secondary: "bg-surface-2 text-text hover:bg-surface",

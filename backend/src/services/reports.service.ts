@@ -49,3 +49,23 @@ export const getSummaryReport = async (organizationId: number) => {
     topItems: topItemsReport
   };
 };
+
+export const getDashboardMetrics = async (organizationId: number) => {
+  const [activeLoans, availableItems, bannedUsers] = await Promise.all([
+    prisma.loan.count({ where: { organizationId, status: "ACTIVE" } }),
+    prisma.item.count({ where: { organizationId, isActive: true, quantity: { gt: 0 } } }),
+    prisma.user.count({ where: { organizationId, status: "BANNED" } })
+  ]);
+
+  return { activeLoans, availableItems, bannedUsers };
+};
+
+export const getAdminSummary = async (organizationId: number) => {
+  const [activeUsers, pendingReports, availableItems] = await Promise.all([
+    prisma.user.count({ where: { organizationId, status: "ACTIVE" } }),
+    prisma.userReport.count({ where: { organizationId, status: "PENDING" } }),
+    prisma.item.count({ where: { organizationId, isActive: true, quantity: { gt: 0 } } })
+  ]);
+
+  return { activeUsers, pendingReports, availableItems };
+};

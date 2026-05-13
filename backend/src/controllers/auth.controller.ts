@@ -26,8 +26,9 @@ export const register = async (req: Request, res: Response) => {
   const data = registerSchema.parse(req.body);
 
   const org = await prisma.organization.findUnique({ where: { nit: data.organizationNit } });
-  if (!org) throw new ApiError("Organization not found", 404);
-  if (org.status === "BANNED") throw new ApiError("Organization is banned", 403);
+  if (!org || org.status === "BANNED") {
+    throw new ApiError("Invalid registration data", 400);
+  }
 
   const user = await createUser(data.email, data.password, data.fullName, org.id, "STUDENT");
 
@@ -50,7 +51,9 @@ export const login = async (req: Request, res: Response) => {
   const data = loginSchema.parse(req.body);
 
   const org = await prisma.organization.findUnique({ where: { nit: data.organizationNit } });
-  if (!org) throw new ApiError("Organization not found", 404);
+  if (!org || org.status === "BANNED") {
+    throw new ApiError("Invalid credentials", 401);
+  }
 
   const user = await validateUser(data.email, data.password, org.id);
 

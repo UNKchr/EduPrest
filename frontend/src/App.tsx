@@ -12,6 +12,7 @@ import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AdminReportsPage } from "./pages/AdminReportsPage";
 import { TechReportsPage } from "./pages/TechReportsPage";
 import { SuperAdminOrgsPage } from "./pages/SuperAdminOrgsPage";
+import { SuperAdminRequestsPage } from "./pages/SuperAdminRequestsPage";
 
 function App() {
   return (
@@ -106,6 +107,15 @@ function App() {
           element={
             <ProtectedRoute minRole="SUPER_ADMIN">
               <SuperAdminOrgsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/super-requests"
+          element={
+            <ProtectedRoute minRole="SUPER_ADMIN">
+              <SuperAdminRequestsPage />
             </ProtectedRoute>
           }
         />

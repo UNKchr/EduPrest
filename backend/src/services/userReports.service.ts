@@ -13,6 +13,17 @@ export const createReport = async (userId: number, reportedById: number, orgId: 
   });
 };
 
+export const resolveUserIdByEmail = async (email: string, orgId: number) => {
+  const user = await prisma.user.findFirst({
+    where: {
+      organizationId: orgId,
+      email: { equals: email, mode: "insensitive" }
+    }
+  });
+  if (!user) throw new ApiError("User not found", 404);
+  return user.id;
+};
+
 export const listReports = async (orgId: number, status?: "PENDING" | "APPROVED" | "REJECTED") => {
   return prisma.userReport.findMany({
     where: { organizationId: orgId, status: status || undefined },

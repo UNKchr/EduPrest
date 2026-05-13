@@ -26,5 +26,11 @@ export const organizationsApi = {
   unban: async (id: number) => {
     const { data } = await http.patch<Organization>(`/orgs/${id}/unban`);
     return data;
+  },
+  remove: async (id: number, confirm: string) => {
+    const { data } = await http.delete<{ message: string }>(`/orgs/${id}`, {
+      data: { confirm }
+    });
+    return data;
   }
 };

@@ -36,6 +36,12 @@ enum ReportStatus {
   REJECTED
 }
 
+enum BanRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Organization {
   id        Int                @id @default(autoincrement())
   name      String
@@ -50,6 +56,7 @@ model Organization {
   loans   Loan[]
   logs    AuditLog[]
   reports UserReport[]
+  banRequests AdminBanRequest[]
 }
 
 model User {
@@ -71,6 +78,9 @@ model User {
   logs            AuditLog[]   @relation("UserLogs")
   reportsMade     UserReport[] @relation("ReportsMade")
   reportsReceived UserReport[] @relation("ReportsReceived")
+  banRequestsMade     AdminBanRequest[] @relation("BanRequestsMade")
+  banRequestsTarget   AdminBanRequest[] @relation("BanRequestsTarget")
+  banRequestsDecided  AdminBanRequest[] @relation("BanRequestsDecided")
 
   @@unique([email, organizationId])
 }
@@ -134,4 +144,28 @@ model UserReport {
 
   user       User @relation("ReportsReceived", fields: [userId], references: [id])
   reportedBy User @relation("ReportsMade", fields: [reportedById], references: [id])
+}
+
+model AdminBanRequest {
+  id            Int              @id @default(autoincrement())
+  reason        String
+  status        BanRequestStatus @default(PENDING)
+  createdAt     DateTime         @default(now())
+  decidedAt     DateTime?
+  decisionNote  String?
+
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  requestedById Int
+  requestedBy   User @relation("BanRequestsMade", fields: [requestedById], references: [id])
+
+  targetUserId Int
+  targetUser   User @relation("BanRequestsTarget", fields: [targetUserId], references: [id])
+
+  decidedById Int?
+  decidedBy   User? @relation("BanRequestsDecided", fields: [decidedById], references: [id])
+
+  @@index([organizationId, status])
+  @@index([targetUserId, status])
 }

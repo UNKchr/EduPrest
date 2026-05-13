@@ -1,14 +1,56 @@
 import { useEffect, useState } from "react";
 import { userReportsApi, type UserReport } from "../services/userReportsApi";
 import { usersApi } from "../services/usersApi";
+import { useModal } from "../context/ModalContext";
+import { useToast } from "../context/ToastContext";
 import { AppLayout } from "../components/layout/AppLayout";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 
+const CONFIRM_TEXT = "CONFIRMAR";
+
+const IconApprove = () => (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const IconReject = () => (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const IconBan = () => (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+    <path d="M8 8l8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
 export const AdminReportsPage = () => {
   const [reports, setReports] = useState<UserReport[]>([]);
+  const { prompt, confirmText } = useModal();
+  const { showToast } = useToast();
+
+  const askReason = (title: string) =>
+    prompt({
+      title,
+      message: "Escribe el motivo (min 10 caracteres).",
+      placeholder: "Motivo",
+      minLength: 10,
+      multiline: true
+    });
+
+  const askConfirm = (title: string) =>
+    confirmText({
+      title,
+      message: `Escribe ${CONFIRM_TEXT} para continuar.`,
+      confirmText: CONFIRM_TEXT,
+      placeholder: CONFIRM_TEXT
+    });
 
   const load = async () => {
     const data = await userReportsApi.list();
@@ -29,9 +71,12 @@ export const AdminReportsPage = () => {
   };
 
   const banUser = async (userId: number) => {
-    const reason = window.prompt("Motivo del baneo:");
-    if (!reason || reason.trim().length < 5) return;
-    await usersApi.ban(userId, reason);
+    const reason = await askReason("Motivo del baneo");
+    if (!reason) return;
+    const confirmed = await askConfirm("Confirmar baneo de usuario");
+    if (!confirmed) return;
+    await usersApi.ban(userId, reason, CONFIRM_TEXT);
+    showToast({ tone: "danger", icon: "ban", label: "Baneado" });
     await load();
   };
 
@@ -60,10 +105,41 @@ export const AdminReportsPage = () => {
                     {r.status}
                   </Badge>
                 </td>
-                <td className="space-x-2">
-                  <Button size="sm" onClick={() => update(r.id, "APPROVED")}>Aprobar</Button>
-                  <Button variant="secondary" size="sm" onClick={() => update(r.id, "REJECTED")}>Rechazar</Button>
-                  <Button variant="danger" size="sm" onClick={() => banUser(r.user.id)}>Banear</Button>
+                <td>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      className="px-2"
+                      title="Aprobar"
+                      aria-label="Aprobar"
+                      onClick={() => update(r.id, "APPROVED")}
+                    >
+                      <IconApprove />
+                      <span className="sr-only">Aprobar</span>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="px-2"
+                      title="Rechazar"
+                      aria-label="Rechazar"
+                      onClick={() => update(r.id, "REJECTED")}
+                    >
+                      <IconReject />
+                      <span className="sr-only">Rechazar</span>
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      className="px-2"
+                      title="Banear"
+                      aria-label="Banear"
+                      onClick={() => banUser(r.user.id)}
+                    >
+                      <IconBan />
+                      <span className="sr-only">Banear</span>
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

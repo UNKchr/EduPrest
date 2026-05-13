@@ -12,7 +12,7 @@ export type UserReport = {
 };
 
 export const userReportsApi = {
-  create: async (payload: { userId: number; reason: string }) => {
+  create: async (payload: { userId?: number; userEmail?: string; reason: string }) => {
     const { data } = await http.post<UserReport>("/user-reports", payload);
     return data;
   },

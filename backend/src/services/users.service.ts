@@ -1,12 +1,21 @@
 import bcrypt from "bcrypt";
 import { prisma } from "../config/prisma";
 import { ApiError } from "../middlewares/errorHandler";
+import { safeAuditLog } from "../utils/audit";
 import type { Role } from "../utils/roles";
 
 type ActorContext = {
   id: number;
   role: Role;
   orgId?: number;
+};
+
+type ListUsersParams = {
+  orgId?: number;
+  q?: string;
+  role?: Role;
+  limit?: number;
+  offset?: number;
 };
 
 const loadTargetUser = async (id: number, orgId?: number) => {
@@ -17,14 +26,17 @@ const loadTargetUser = async (id: number, orgId?: number) => {
   return user;
 };
 
-const ensureNotSelf = (targetId: number, actorId: number, action: string) => {
-  if (targetId === actorId) {
-    throw new ApiError(`You cannot ${action} your own user`, 403);
-  }
+const logGuard = async (
+  action: string,
+  actorId: number,
+  targetId: number,
+  organizationId: number
+) => {
+  await safeAuditLog(action, actorId, "User", targetId, organizationId);
 };
 
-const ensureNotLastAdmin = async (organizationId: number, targetId: number) => {
-  const remaining = await prisma.user.count({
+const countRemainingAdmins = (organizationId: number, targetId: number) =>
+  prisma.user.count({
     where: {
       organizationId,
       role: "ADMIN",
@@ -32,26 +44,38 @@ const ensureNotLastAdmin = async (organizationId: number, targetId: number) => {
       id: { not: targetId }
     }
   });
-  if (remaining === 0) {
-    throw new ApiError("At least one active admin is required", 409);
-  }
-};
 
-const ensureNotLastSuperAdmin = async (targetId: number) => {
-  const remaining = await prisma.user.count({
+const countRemainingSuperAdmins = (targetId: number) =>
+  prisma.user.count({
     where: { role: "SUPER_ADMIN", status: "ACTIVE", id: { not: targetId } }
   });
-  if (remaining === 0) {
-    throw new ApiError("At least one active super admin is required", 409);
-  }
-};
 
-export const listUsers = async (orgId?: number) => {
-  return prisma.user.findMany({
-    where: orgId ? { organizationId: orgId } : undefined,
-    orderBy: { createdAt: "desc" },
-    select: { id: true, email: true, fullName: true, role: true, status: true, organizationId: true }
-  });
+export const listUsers = async ({ orgId, q, role, limit = 20, offset = 0 }: ListUsersParams) => {
+  const where = {
+    ...(orgId ? { organizationId: orgId } : {}),
+    ...(role ? { role } : {}),
+    ...(q
+      ? {
+        OR: [
+          { email: { contains: q, mode: "insensitive" } },
+          { fullName: { contains: q, mode: "insensitive" } }
+        ]
+      }
+      : {})
+  };
+
+  const [data, total] = await prisma.$transaction([
+    prisma.user.findMany({
+      where,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: offset,
+      take: limit,
+      select: { id: true, email: true, fullName: true, role: true, status: true, organizationId: true }
+    }),
+    prisma.user.count({ where })
+  ]);
+
+  return { data, total };
 };
 
 export const createUserByAdmin = async (
@@ -73,18 +97,35 @@ export const createUserByAdmin = async (
 
 export const updateUserRole = async (id: number, role: Role, actor: ActorContext) => {
   const target = await loadTargetUser(id, actor.orgId);
-  ensureNotSelf(target.id, actor.id, "change the role of");
+  if (target.id === actor.id) {
+    await logGuard("USER_ROLE_SELF_FORBIDDEN", actor.id, target.id, target.organizationId);
+    throw new ApiError("You cannot change your own role", 403);
+  }
+
+  if (actor.role === "ADMIN" && target.role === "ADMIN") {
+    await logGuard("USER_ROLE_FORBIDDEN", actor.id, target.id, target.organizationId);
+    throw new ApiError("Admins cannot change roles of other admins", 403);
+  }
 
   if (target.role === "SUPER_ADMIN" && actor.role !== "SUPER_ADMIN") {
+    await logGuard("USER_ROLE_FORBIDDEN_SUPER_ADMIN", actor.id, target.id, target.organizationId);
     throw new ApiError("Forbidden", 403);
   }
 
   if (target.role === "SUPER_ADMIN" && role !== "SUPER_ADMIN") {
-    await ensureNotLastSuperAdmin(target.id);
+    const remaining = await countRemainingSuperAdmins(target.id);
+    if (remaining === 0) {
+      await logGuard("USER_ROLE_BLOCKED_LAST_SUPER_ADMIN", actor.id, target.id, target.organizationId);
+      throw new ApiError("At least one active super admin is required", 409);
+    }
   }
 
   if (target.role === "ADMIN" && role !== "ADMIN") {
-    await ensureNotLastAdmin(target.organizationId, target.id);
+    const remaining = await countRemainingAdmins(target.organizationId, target.id);
+    if (remaining === 0) {
+      await logGuard("USER_ROLE_BLOCKED_LAST_ADMIN", actor.id, target.id, target.organizationId);
+      throw new ApiError("At least one active admin is required", 409);
+    }
   }
 
   return prisma.user.update({ where: { id: target.id }, data: { role } });
@@ -92,18 +133,35 @@ export const updateUserRole = async (id: number, role: Role, actor: ActorContext
 
 export const banUser = async (id: number, reason: string, actor: ActorContext) => {
   const target = await loadTargetUser(id, actor.orgId);
-  ensureNotSelf(target.id, actor.id, "ban");
+  if (target.id === actor.id) {
+    await logGuard("USER_BAN_SELF_FORBIDDEN", actor.id, target.id, target.organizationId);
+    throw new ApiError("You cannot ban your own user", 403);
+  }
+
+  if (actor.role === "ADMIN" && target.role === "ADMIN") {
+    await logGuard("USER_BAN_FORBIDDEN", actor.id, target.id, target.organizationId);
+    throw new ApiError("Admins cannot ban other admins", 403);
+  }
 
   if (target.role === "SUPER_ADMIN" && actor.role !== "SUPER_ADMIN") {
+    await logGuard("USER_BAN_FORBIDDEN_SUPER_ADMIN", actor.id, target.id, target.organizationId);
     throw new ApiError("Forbidden", 403);
   }
 
   if (target.role === "SUPER_ADMIN" && target.status === "ACTIVE") {
-    await ensureNotLastSuperAdmin(target.id);
+    const remaining = await countRemainingSuperAdmins(target.id);
+    if (remaining === 0) {
+      await logGuard("USER_BAN_BLOCKED_LAST_SUPER_ADMIN", actor.id, target.id, target.organizationId);
+      throw new ApiError("At least one active super admin is required", 409);
+    }
   }
 
   if (target.role === "ADMIN" && target.status === "ACTIVE") {
-    await ensureNotLastAdmin(target.organizationId, target.id);
+    const remaining = await countRemainingAdmins(target.organizationId, target.id);
+    if (remaining === 0) {
+      await logGuard("USER_BAN_BLOCKED_LAST_ADMIN", actor.id, target.id, target.organizationId);
+      throw new ApiError("At least one active admin is required", 409);
+    }
   }
 
   return prisma.user.update({
@@ -115,6 +173,21 @@ export const banUser = async (id: number, reason: string, actor: ActorContext) =
 export const unbanUser = async (id: number, actor: ActorContext) => {
   const target = await loadTargetUser(id, actor.orgId);
 
+  if (target.id === actor.id) {
+    await logGuard("USER_UNBAN_SELF_FORBIDDEN", actor.id, target.id, target.organizationId);
+    throw new ApiError("You cannot unban your own user", 403);
+  }
+
+  if (actor.role === "ADMIN" && target.role === "ADMIN") {
+    await logGuard("USER_UNBAN_FORBIDDEN", actor.id, target.id, target.organizationId);
+    throw new ApiError("Admins cannot unban other admins", 403);
+  }
+
+  if (target.role === "SUPER_ADMIN" && actor.role !== "SUPER_ADMIN") {
+    await logGuard("USER_UNBAN_FORBIDDEN_SUPER_ADMIN", actor.id, target.id, target.organizationId);
+    throw new ApiError("Forbidden", 403);
+  }
+
   if (target.role === "SUPER_ADMIN" && actor.role !== "SUPER_ADMIN") {
     throw new ApiError("Forbidden", 403);
   }
@@ -123,4 +196,55 @@ export const unbanUser = async (id: number, actor: ActorContext) => {
     where: { id: target.id },
     data: { status: "ACTIVE", bannedAt: null, banReason: null }
   });
+};
+
+export const deleteUser = async (id: number, actor: ActorContext) => {
+  const target = await loadTargetUser(id, actor.orgId);
+
+  if (target.id === actor.id) {
+    await logGuard("USER_DELETE_SELF_FORBIDDEN", actor.id, target.id, target.organizationId);
+    throw new ApiError("You cannot delete your own user", 403);
+  }
+
+  if (actor.role === "ADMIN" && (target.role === "ADMIN" || target.role === "SUPER_ADMIN")) {
+    await logGuard("USER_DELETE_FORBIDDEN", actor.id, target.id, target.organizationId);
+    throw new ApiError("Admins cannot delete other admins", 403);
+  }
+
+  if (target.role === "SUPER_ADMIN" && actor.role !== "SUPER_ADMIN") {
+    await logGuard("USER_DELETE_FORBIDDEN_SUPER_ADMIN", actor.id, target.id, target.organizationId);
+    throw new ApiError("Forbidden", 403);
+  }
+
+  if (target.role === "SUPER_ADMIN") {
+    const remaining = await countRemainingSuperAdmins(target.id);
+    if (remaining === 0) {
+      await logGuard("USER_DELETE_BLOCKED_LAST_SUPER_ADMIN", actor.id, target.id, target.organizationId);
+      throw new ApiError("At least one active super admin is required", 409);
+    }
+  }
+
+  if (target.role === "ADMIN") {
+    const remaining = await countRemainingAdmins(target.organizationId, target.id);
+    if (remaining === 0) {
+      await logGuard("USER_DELETE_BLOCKED_LAST_ADMIN", actor.id, target.id, target.organizationId);
+      throw new ApiError("At least one active admin is required", 409);
+    }
+  }
+
+  const deleted = await prisma.$transaction(async (tx) => {
+    await tx.adminBanRequest.deleteMany({
+      where: {
+        OR: [{ requestedById: target.id }, { targetUserId: target.id }, { decidedById: target.id }]
+      }
+    });
+    await tx.userReport.deleteMany({
+      where: { OR: [{ userId: target.id }, { reportedById: target.id }] }
+    });
+    await tx.loan.deleteMany({ where: { userId: target.id } });
+    await tx.auditLog.deleteMany({ where: { userId: target.id } });
+    return tx.user.delete({ where: { id: target.id } });
+  });
+
+  return deleted;
 };
