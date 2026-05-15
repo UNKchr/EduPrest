@@ -302,16 +302,21 @@ export const LoansPage = () => {
                         {new Date(l.dueAt).toLocaleDateString("es-CO", { day: "2-digit", month: "short" })}
                       </td>
                       <td className="py-3">
-                        {l.status === "ACTIVE" && (
+                        {l.status !== "RETURNED" && (
                           <button
                             type="button"
                             title="Registrar devolución"
                             aria-label="Registrar devolución"
                             onClick={() => markReturned(l)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-success/20 bg-success-dim px-2.5 py-1 text-xs font-medium text-success transition-colors hover:bg-success/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/50"
+                            className={cn(
+                              "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2",
+                              l.status === "OVERDUE"
+                                ? "border-warning/20 bg-warning-dim text-warning hover:bg-warning/20 focus-visible:ring-warning/50"
+                                : "border-success/20 bg-success-dim text-success hover:bg-success/20 focus-visible:ring-success/50"
+                            )}
                           >
                             <IconReturn />
-                            Devolver
+                            {l.status === "OVERDUE" ? "Devolver (vencido)" : "Devolver"}
                           </button>
                         )}
                       </td>
