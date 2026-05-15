@@ -54,6 +54,7 @@ export const AdminUsersPage = () => {
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "">("");
+  const [orgFilter, setOrgFilter] = useState<number | "">("");
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
@@ -93,6 +94,7 @@ export const AdminUsersPage = () => {
     const response = await usersApi.list({
       q: query.trim() || undefined,
       role: showRoleFilter && roleFilter ? roleFilter : undefined,
+      orgId: user.role === "SUPER_ADMIN" && orgFilter ? orgFilter : undefined,
       limit,
       offset: page * limit
     });
@@ -118,6 +120,7 @@ export const AdminUsersPage = () => {
       .list({
         q: query.trim() || undefined,
         role: showRoleFilter && roleFilter ? roleFilter : undefined,
+        orgId: user.role === "SUPER_ADMIN" && orgFilter ? orgFilter : undefined,
         limit,
         offset: page * limit
       })
@@ -130,7 +133,7 @@ export const AdminUsersPage = () => {
     return () => {
       active = false;
     };
-  }, [user, query, roleFilter, limit, page, showRoleFilter]);
+  }, [user, query, roleFilter, orgFilter, limit, page, showRoleFilter]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,6 +283,22 @@ export const AdminUsersPage = () => {
                 <option value="STUDENT">STUDENT</option>
               </Select>
             )}
+            {user?.role === "SUPER_ADMIN" && (
+              <Select
+                value={String(orgFilter)}
+                onChange={(e) => {
+                  setOrgFilter(e.target.value ? Number(e.target.value) : "");
+                  setPage(0);
+                }}
+              >
+                <option value="">Todas las organizaciones</option>
+                {orgs.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </Select>
+            )}
             <Select
               value={String(limit)}
               onChange={(e) => {
@@ -287,15 +306,17 @@ export const AdminUsersPage = () => {
                 setPage(0);
               }}
             >
-              <option value="5">5 por pagina</option>
-              <option value="10">10 por pagina</option>
-              <option value="20">20 por pagina</option>
-              <option value="30">30 por pagina</option>
+              <option value="5">5 por página</option>
+              <option value="10">10 por página</option>
+              <option value="20">20 por página</option>
+              <option value="30">30 por página</option>
             </Select>
             <Button
               variant="secondary"
               onClick={() => {
                 setQuery("");
+                setRoleFilter("");
+                setOrgFilter("");
                 setPage(0);
               }}
             >
@@ -323,7 +344,9 @@ export const AdminUsersPage = () => {
                   <td>
                     <Badge tone={u.status === "ACTIVE" ? "success" : "danger"}>{u.status}</Badge>
                   </td>
-                  <td>{u.organizationId}</td>
+                  <td className="py-2 text-sm">
+                    {orgs.find((o) => o.id === u.organizationId)?.name ?? u.organizationId}
+                  </td>
                   <td>
                     {canManage ? (
                       <div className="flex flex-wrap items-center gap-2">

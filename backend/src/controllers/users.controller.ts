@@ -47,7 +47,8 @@ const listSchema = z.object({
   q: z.string().min(1).optional(),
   role: z.enum(["SUPER_ADMIN", "ADMIN", "TECH", "STUDENT"]).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
-  offset: z.coerce.number().int().min(0).optional()
+  offset: z.coerce.number().int().min(0).optional(),
+  orgId: z.coerce.number().int().positive().optional()
 });
 
 export const getUsers = async (req: AuthRequest, res: Response) => {
@@ -59,16 +60,18 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
       q: typeof req.query.q === "string" ? req.query.q : undefined,
       role: typeof req.query.role === "string" ? req.query.role : undefined,
       limit: typeof req.query.limit === "string" ? req.query.limit : undefined,
-      offset: typeof req.query.offset === "string" ? req.query.offset : undefined
+      offset: typeof req.query.offset === "string" ? req.query.offset : undefined,
+      orgId: typeof req.query.orgId === "string" ? req.query.orgId : undefined
     });
   } catch {
     await safeAuditLog("USER_LIST_INVALID_QUERY", req.user.id, "User", 0, req.user.orgId);
     throw new ApiError("Invalid query", 400);
   }
 
+  const { orgId: queryOrgId, ...rest } = params;
   const { data, total } = await listUsers({
-    orgId: isSuper ? undefined : req.user?.orgId,
-    ...params
+    orgId: isSuper ? queryOrgId : req.user?.orgId,
+    ...rest
   });
   res.json({ data, total });
 };

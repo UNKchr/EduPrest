@@ -19,6 +19,7 @@ export const usersApi = {
   list: async (params?: {
     q?: string;
     role?: Role;
+    orgId?: number;
     limit?: number;
     offset?: number;
   }) => {
