@@ -12,7 +12,6 @@ import {
   IconChart,
   IconReport
 } from "../Icons";
-import { Button } from "../ui/Button";
 import { cn } from "../../utils/cn";
 
 const NavItem = ({
