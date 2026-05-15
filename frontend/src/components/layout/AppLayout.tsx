@@ -51,6 +51,9 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
               <NavLink to="/admin-users" className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-surface-2", isActive && "bg-surface-2")}>
                 <IconUsers /> Usuarios
               </NavLink>
+              <NavLink to="/admin-access-requests" className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-surface-2", isActive && "bg-surface-2")}>
+                <IconReport /> Solicitudes de acceso
+              </NavLink>
               <NavLink to="/admin-reports" className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-surface-2", isActive && "bg-surface-2")}>
                 <IconShield /> Reportes
               </NavLink>
@@ -59,6 +62,9 @@ export const AppLayout = ({ children }: { children: React.ReactNode }) => {
             <RoleGate allowed={["SUPER_ADMIN"]}>
               <NavLink to="/super-orgs" className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-surface-2", isActive && "bg-surface-2")}>
                 <IconChart /> Organizaciones
+              </NavLink>
+              <NavLink to="/super-org-requests" className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-surface-2", isActive && "bg-surface-2")}>
+                <IconReport /> Solicitudes de orgs
               </NavLink>
               <NavLink to="/super-requests" className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-surface-2", isActive && "bg-surface-2")}>
                 <IconShield /> Solicitudes de baneo
