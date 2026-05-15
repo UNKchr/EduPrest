@@ -8,17 +8,18 @@ export const createAccessRequest = async (
   password: string,
   organizationId: number
 ) => {
-  // Prevent duplicate pending requests for the same email+org
-  const existing = await prisma.accessRequest.findFirst({
-    where: { email, organizationId, status: "PENDING" }
-  });
-  if (existing) throw new ApiError("Ya existe una solicitud pendiente para este correo en esta organización", 409);
-
-  // Prevent requests for already-registered emails
-  const userExists = await prisma.user.findFirst({ where: { email, organizationId } });
-  if (userExists) throw new ApiError("El correo ya está registrado en esta organización", 409);
-
+  // Always hash the password (constant work) so timing doesn't reveal duplicates.
   const hashed = await bcrypt.hash(password, 12);
+
+  // Silently skip duplicates / already-registered emails to avoid user enumeration.
+  // Admins will simply not see a new pending row for the conflicting email.
+  const [existingRequest, userExists] = await Promise.all([
+    prisma.accessRequest.findFirst({
+      where: { email, organizationId, status: "PENDING" }
+    }),
+    prisma.user.findFirst({ where: { email, organizationId } })
+  ]);
+  if (existingRequest || userExists) return null;
 
   return prisma.accessRequest.create({
     data: { fullName, email, password: hashed, organizationId }

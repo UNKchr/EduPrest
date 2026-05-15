@@ -7,15 +7,13 @@ export const createOrgRequest = async (
   requesterName: string,
   requesterEmail: string
 ) => {
-  // Prevent requests for already-existing organizations
-  const orgExists = await prisma.organization.findUnique({ where: { nit: orgNit } });
-  if (orgExists) throw new ApiError("Ya existe una organización con este NIT", 409);
-
-  // Prevent duplicate pending requests for the same NIT
-  const existing = await prisma.orgRequest.findFirst({
-    where: { orgNit, status: "PENDING" }
-  });
-  if (existing) throw new ApiError("Ya existe una solicitud pendiente para este NIT", 409);
+  // Silently skip if the NIT is already registered or has a pending request, to avoid
+  // revealing organization existence to anonymous callers.
+  const [orgExists, existing] = await Promise.all([
+    prisma.organization.findUnique({ where: { nit: orgNit } }),
+    prisma.orgRequest.findFirst({ where: { orgNit, status: "PENDING" } })
+  ]);
+  if (orgExists || existing) return null;
 
   return prisma.orgRequest.create({
     data: { orgName, orgNit, requesterName, requesterEmail }

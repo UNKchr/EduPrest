@@ -22,23 +22,29 @@ export const authenticate = async (req: AuthRequest, _res: Response, next: NextF
   }
 
   const token = auth.split(" ")[1];
+  let payload: JwtPayload;
   try {
-    const payload = jwt.verify(token, env.jwtAccessSecret) as JwtPayload;
-
-    const user = await prisma.user.findUnique({
-      where: { id: Number(payload.sub) },
-      include: { organization: true }
-    });
-
-    if (!user) throw new ApiError("User not found", 401);
-    if (user.status === "BANNED") throw new ApiError("User is banned", 403);
-    if (user.organization.status === "BANNED") {
-      throw new ApiError("Organization is banned", 403);
-    }
-
-    req.user = { id: user.id, role: user.role as Role, orgId: user.organizationId };
-    return next();
+    payload = jwt.verify(token, env.jwtAccessSecret) as JwtPayload;
   } catch {
     throw new ApiError("Invalid or expired token", 401);
   }
+
+  const userId = Number(payload.sub);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new ApiError("Invalid or expired token", 401);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { organization: true }
+  });
+
+  if (!user) throw new ApiError("Invalid or expired token", 401);
+  if (user.status === "BANNED") throw new ApiError("User is banned", 403);
+  if (user.organization.status === "BANNED") {
+    throw new ApiError("Organization is banned", 403);
+  }
+
+  req.user = { id: user.id, role: user.role as Role, orgId: user.organizationId };
+  return next();
 };

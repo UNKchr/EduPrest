@@ -30,8 +30,17 @@ export const signRefreshToken = (userId: number) => {
 
 export const verifyRefreshToken = (token: string) => {
   const decoded = jwt.verify(token, env.jwtRefreshSecret) as JwtPayload;
-  if (!decoded.sub || typeof decoded.sub !== "string" || !decoded.jti) {
+  if (
+    !decoded.sub ||
+    typeof decoded.sub !== "string" ||
+    !decoded.jti ||
+    typeof decoded.jti !== "string"
+  ) {
     throw new Error("Invalid refresh token payload");
   }
-  return { sub: Number(decoded.sub), jti: decoded.jti as string };
+  const sub = Number(decoded.sub);
+  if (!Number.isInteger(sub) || sub <= 0) {
+    throw new Error("Invalid refresh token payload");
+  }
+  return { sub, jti: decoded.jti };
 };

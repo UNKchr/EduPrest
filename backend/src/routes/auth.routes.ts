@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { login, register, logout, refresh } from "../controllers/auth.controller";
+import { login, logout, refresh } from "../controllers/auth.controller";
 
 const router = Router();
 
@@ -16,9 +16,14 @@ const refreshLimiter = rateLimit({
   message: "Too many refresh attempts, please try again later."
 });
 
-router.post("/register", authLimiter, register);
+const logoutLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: "Too many logout attempts, please try again later."
+});
+
 router.post("/login", authLimiter, login);
 router.post("/refresh", refreshLimiter, refresh);
-router.post("/logout", logout);
+router.post("/logout", logoutLimiter, logout);
 
 export default router;
