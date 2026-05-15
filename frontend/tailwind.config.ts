@@ -8,31 +8,44 @@ export default {
         bg: "var(--bg)",
         surface: "var(--surface)",
         "surface-2": "var(--surface-2)",
+        "surface-3": "var(--surface-3)",
         border: "var(--border)",
+        "border-light": "var(--border-light)",
         text: "var(--text)",
         muted: "var(--text-muted)",
+        subtle: "var(--text-subtle)",
         brand: "var(--brand)",
+        "brand-light": "var(--brand-light)",
+        "brand-dim": "var(--brand-dim)",
         "brand-2": "var(--brand-2)",
         success: "var(--success)",
+        "success-dim": "var(--success-dim)",
         warning: "var(--warning)",
-        danger: "var(--danger)"
+        "warning-dim": "var(--warning-dim)",
+        danger: "var(--danger)",
+        "danger-dim": "var(--danger-dim)"
       },
       boxShadow: {
-        soft: "var(--shadow)"
+        xs: "var(--shadow-xs)",
+        sm: "var(--shadow-sm)",
+        soft: "var(--shadow)",
+        lg: "var(--shadow-lg)",
+        brand: "var(--shadow-brand)"
       },
-      keyframes: {
-        "fade-in": {
-          "0%": { opacity: "0", transform: "translateY(6px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" }
-        },
-        float: {
-          "0%,100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-4px)" }
-        }
+      borderRadius: {
+        sm: "var(--radius-sm)",
+        DEFAULT: "var(--radius)",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)"
       },
-      animation: {
-        "fade-in": "fade-in 0.35s ease-out",
-        float: "float 4s ease-in-out infinite"
+      fontFamily: {
+        sans: ["Inter", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"]
+      },
+      fontSize: {
+        "2xs": ["0.65rem", { lineHeight: "1rem" }]
+      },
+      transitionTimingFunction: {
+        spring: "cubic-bezier(0.16, 1, 0.3, 1)"
       }
     }
   },

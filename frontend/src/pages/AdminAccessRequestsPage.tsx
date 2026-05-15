@@ -241,7 +241,7 @@ export const AdminAccessRequestsPage = () => {
                             title="Conceder acceso"
                             aria-label="Conceder acceso"
                             onClick={() => approve(r)}
-                            className="inline-flex items-center justify-center rounded-lg p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-950 transition-colors"
+                            className="inline-flex items-center justify-center rounded-lg p-1.5 text-success hover:bg-success-dim transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/50"
                           >
                             <IconCheck />
                             <span className="sr-only">Conceder acceso</span>
@@ -251,7 +251,7 @@ export const AdminAccessRequestsPage = () => {
                             title="Denegar acceso"
                             aria-label="Denegar acceso"
                             onClick={() => reject(r)}
-                            className="inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+                            className="inline-flex items-center justify-center rounded-lg p-1.5 text-danger hover:bg-danger-dim transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/50"
                           >
                             <IconReject />
                             <span className="sr-only">Denegar acceso</span>
