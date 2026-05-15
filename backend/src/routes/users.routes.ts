@@ -12,7 +12,7 @@ import {
 
 const router = Router();
 
-router.get("/", authenticate, authorize("ADMIN"), getUsers);
+router.get("/", authenticate, authorize("TECH"), getUsers);
 router.post("/", authenticate, authorize("ADMIN"), createUserHandler);
 router.patch("/:id/role", authenticate, authorize("ADMIN"), updateRoleHandler);
 router.patch("/:id/ban", authenticate, authorize("ADMIN"), banUserHandler);
