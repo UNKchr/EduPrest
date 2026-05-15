@@ -42,6 +42,12 @@ enum BanRequestStatus {
   REJECTED
 }
 
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Organization {
   id        Int                @id @default(autoincrement())
   name      String
@@ -51,12 +57,13 @@ model Organization {
   banReason String?
   createdAt DateTime           @default(now())
 
-  users   User[]
-  items   Item[]
-  loans   Loan[]
-  logs    AuditLog[]
-  reports UserReport[]
-  banRequests AdminBanRequest[]
+  users          User[]
+  items          Item[]
+  loans          Loan[]
+  logs           AuditLog[]
+  reports        UserReport[]
+  banRequests    AdminBanRequest[]
+  accessRequests AccessRequest[]
 }
 
 model User {
@@ -68,6 +75,7 @@ model User {
   status    UserStatus @default(ACTIVE)
   bannedAt  DateTime?
   banReason String?
+  banUntil  DateTime?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -78,9 +86,11 @@ model User {
   logs            AuditLog[]   @relation("UserLogs")
   reportsMade     UserReport[] @relation("ReportsMade")
   reportsReceived UserReport[] @relation("ReportsReceived")
-  banRequestsMade     AdminBanRequest[] @relation("BanRequestsMade")
-  banRequestsTarget   AdminBanRequest[] @relation("BanRequestsTarget")
-  banRequestsDecided  AdminBanRequest[] @relation("BanRequestsDecided")
+  banRequestsMade        AdminBanRequest[] @relation("BanRequestsMade")
+  banRequestsTarget      AdminBanRequest[] @relation("BanRequestsTarget")
+  banRequestsDecided     AdminBanRequest[] @relation("BanRequestsDecided")
+  accessRequestDecisions AccessRequest[]   @relation("AccessRequestDecisions")
+  orgRequestDecisions    OrgRequest[]      @relation("OrgRequestDecisions")
 
   @@unique([email, organizationId])
 }
@@ -168,4 +178,38 @@ model AdminBanRequest {
 
   @@index([organizationId, status])
   @@index([targetUserId, status])
+}
+
+model AccessRequest {
+  id        Int           @id @default(autoincrement())
+  fullName  String
+  email     String
+  password  String
+  status    RequestStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  decidedAt DateTime?
+
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  decidedById Int?
+  decidedBy   User? @relation("AccessRequestDecisions", fields: [decidedById], references: [id])
+
+  @@index([organizationId, status])
+}
+
+model OrgRequest {
+  id             Int           @id @default(autoincrement())
+  orgName        String
+  orgNit         String
+  requesterName  String
+  requesterEmail String
+  status         RequestStatus @default(PENDING)
+  createdAt      DateTime      @default(now())
+  decidedAt      DateTime?
+
+  decidedById Int?
+  decidedBy   User? @relation("OrgRequestDecisions", fields: [decidedById], references: [id])
+
+  @@index([status])
 }
