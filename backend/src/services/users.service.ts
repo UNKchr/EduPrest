@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma";
 import { ApiError } from "../middlewares/errorHandler";
 import { safeAuditLog } from "../utils/audit";
@@ -57,8 +58,8 @@ export const listUsers = async ({ orgId, q, role, limit = 20, offset = 0 }: List
     ...(q
       ? {
         OR: [
-          { email: { contains: q, mode: "insensitive" } },
-          { fullName: { contains: q, mode: "insensitive" } }
+          { email: { contains: q, mode: Prisma.QueryMode.insensitive } },
+          { fullName: { contains: q, mode: Prisma.QueryMode.insensitive } }
         ]
       }
       : {})
