@@ -23,17 +23,6 @@ export const authApi = {
     return data.user;
   },
 
-  register: async (email: string, password: string, fullName: string, organizationNit: string) => {
-    const { data } = await http.post<LoginResponse>("/auth/register", {
-      email,
-      password,
-      fullName,
-      organizationNit
-    });
-    tokenStore.set(data.accessToken);
-    return data.user;
-  },
-
   refresh: async () => {
     const { data } = await http.post<RefreshResponse>("/auth/refresh");
     tokenStore.set(data.accessToken);

@@ -1,18 +1,11 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { createUser, validateUser } from "../services/auth.service";
+import { validateUser } from "../services/auth.service";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/tokens";
 import { redis } from "../config/redis";
 import { ApiError } from "../middlewares/errorHandler";
 import { env } from "../config/env";
 import { prisma } from "../config/prisma";
-
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  fullName: z.string().min(3),
-  organizationNit: z.string().min(3)
-});
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -21,31 +14,6 @@ const loginSchema = z.object({
 });
 
 const refreshKey = (jti: string) => `refresh:${jti}`;
-
-export const register = async (req: Request, res: Response) => {
-  const data = registerSchema.parse(req.body);
-
-  const org = await prisma.organization.findUnique({ where: { nit: data.organizationNit } });
-  if (!org || org.status === "BANNED") {
-    throw new ApiError("Invalid registration data", 400);
-  }
-
-  const user = await createUser(data.email, data.password, data.fullName, org.id, "STUDENT");
-
-  const accessToken = signAccessToken(user.id, user.role, user.organizationId);
-  const { token: refreshToken, jti } = signRefreshToken(user.id);
-
-  await redis.set(refreshKey(jti), String(user.id), "EX", 60 * 60 * 24 * 7);
-
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: env.cookieSecure,
-    sameSite: "lax",
-    path: "/auth"
-  });
-
-  res.json({ accessToken, user: { id: user.id, email: user.email, role: user.role, orgId: user.organizationId } });
-};
 
 export const login = async (req: Request, res: Response) => {
   const data = loginSchema.parse(req.body);
@@ -65,7 +33,7 @@ export const login = async (req: Request, res: Response) => {
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: env.cookieSecure,
-    sameSite: "lax",
+    sameSite: env.cookieSameSite,
     path: "/auth"
   });
 
@@ -76,7 +44,13 @@ export const refresh = async (req: Request, res: Response) => {
   const token = req.cookies?.refreshToken;
   if (!token) throw new ApiError("Missing refresh token", 401);
 
-  const payload = verifyRefreshToken(token);
+  let payload: ReturnType<typeof verifyRefreshToken>;
+  try {
+    payload = verifyRefreshToken(token);
+  } catch {
+    throw new ApiError("Invalid or expired refresh token", 401);
+  }
+
   const exists = await redis.get(refreshKey(payload.jti));
   if (!exists) throw new ApiError("Refresh token revoked", 401);
 
@@ -98,7 +72,7 @@ export const refresh = async (req: Request, res: Response) => {
   res.cookie("refreshToken", newRefresh, {
     httpOnly: true,
     secure: env.cookieSecure,
-    sameSite: "lax",
+    sameSite: env.cookieSameSite,
     path: "/auth"
   });
 
@@ -118,7 +92,7 @@ export const logout = async (req: Request, res: Response) => {
 
   res.clearCookie("refreshToken", {
     path: "/auth",
-    sameSite: "lax",
+    sameSite: env.cookieSameSite,
     secure: env.cookieSecure
   });
   res.json({ message: "Logged out" });
