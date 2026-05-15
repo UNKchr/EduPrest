@@ -8,6 +8,7 @@ import { ItemsPage } from "./pages/ItemsPage";
 import { LoansPage } from "./pages/LoansPage";
 import { AuditPage } from "./pages/AuditPage";
 import { ReportsPage } from "./pages/ReportsPage";
+import { OrgMetricsPage } from "./pages/OrgMetricsPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AdminReportsPage } from "./pages/AdminReportsPage";
 import { TechReportsPage } from "./pages/TechReportsPage";
@@ -118,6 +119,15 @@ function App() {
           element={
             <ProtectedRoute minRole="SUPER_ADMIN">
               <SuperAdminRequestsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/metrics"
+          element={
+            <ProtectedRoute minRole="ADMIN">
+              <OrgMetricsPage />
             </ProtectedRoute>
           }
         />

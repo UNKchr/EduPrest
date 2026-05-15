@@ -69,3 +69,96 @@ export const getAdminSummary = async (organizationId: number) => {
 
   return { activeUsers, pendingReports, availableItems };
 };
+
+// orgId === null → global (SUPER_ADMIN), orgId number → org-scoped
+export const getOrgAnalytics = async (orgId: number | null) => {
+  const now = new Date();
+  const eightWeeksAgo = new Date(now.getTime() - 8 * 7 * 24 * 60 * 60 * 1000);
+  const orgWhere = orgId !== null ? { organizationId: orgId } : {};
+
+  const [weeklyLoanData, activeLoans, overdueLoans, availableItems, recentLoans, orgsData] =
+    await Promise.all([
+      prisma.loan.findMany({
+        where: { ...orgWhere, loanedAt: { gte: eightWeeksAgo } },
+        select: { loanedAt: true, returnedAt: true }
+      }),
+      prisma.loan.count({ where: { ...orgWhere, status: "ACTIVE" } }),
+      prisma.loan.count({
+        where: {
+          ...orgWhere,
+          OR: [{ status: "OVERDUE" }, { status: "ACTIVE", dueAt: { lt: now } }]
+        }
+      }),
+      prisma.item.count({ where: { ...orgWhere, isActive: true, quantity: { gt: 0 } } }),
+      prisma.loan.findMany({
+        where: orgWhere,
+        include: {
+          item: { select: { name: true, code: true } },
+          user: { select: { email: true, fullName: true } },
+          organization: { select: { name: true } }
+        },
+        orderBy: { loanedAt: "desc" },
+        take: 40
+      }),
+      orgId === null
+        ? prisma.organization.findMany({
+            select: {
+              id: true,
+              name: true,
+              nit: true,
+              _count: { select: { loans: true, users: true, items: true } }
+            },
+            orderBy: { name: "asc" }
+          })
+        : Promise.resolve(null)
+    ]);
+
+  // Build weekly stats from oldest to newest (8 buckets)
+  const weeklyStats = Array.from({ length: 8 }, (_, idx) => {
+    const i = 7 - idx;
+    const bucketEnd = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+    const bucketStart = new Date(bucketEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const label = i === 0 ? "Esta sem" : i === 1 ? "Hace 1 sem" : `Hace ${i} sem`;
+    return {
+      week: label,
+      loans: weeklyLoanData.filter((l) => {
+        const d = new Date(l.loanedAt);
+        return d >= bucketStart && d < bucketEnd;
+      }).length,
+      returns: weeklyLoanData.filter((l) => {
+        if (!l.returnedAt) return false;
+        const d = new Date(l.returnedAt);
+        return d >= bucketStart && d < bucketEnd;
+      }).length
+    };
+  });
+
+  return {
+    weeklyStats,
+    activeLoans,
+    overdueLoans,
+    availableItems,
+    recentActivity: recentLoans.map((l) => ({
+      id: l.id,
+      itemName: l.item.name,
+      itemCode: l.item.code,
+      userEmail: l.user.email,
+      userFullName: l.user.fullName,
+      orgName: l.organization.name,
+      loanedAt: l.loanedAt,
+      dueAt: l.dueAt,
+      returnedAt: l.returnedAt ?? null,
+      status: l.status
+    })),
+    orgs: orgsData
+      ? orgsData.map((o) => ({
+          id: o.id,
+          name: o.name,
+          nit: o.nit,
+          totalLoans: o._count.loans,
+          totalUsers: o._count.users,
+          totalItems: o._count.items
+        }))
+      : null
+  };
+};

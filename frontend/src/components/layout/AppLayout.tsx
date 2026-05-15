@@ -106,6 +106,7 @@ const SidebarContent = ({ onNavClick }: { onNavClick?: () => void }) => {
           <NavItem to="/admin-users" icon={<IconUsers />} label="Usuarios" />
           <NavItem to="/admin-access-requests" icon={<IconReport />} label="Solicitudes de acceso" />
           <NavItem to="/admin-reports" icon={<IconShield />} label="Reportes" />
+          <NavItem to="/metrics" icon={<IconChart />} label="Métricas" />
         </RoleGate>
 
         <RoleGate allowed={["SUPER_ADMIN"]}>
